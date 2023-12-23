@@ -6,11 +6,15 @@ stdenv.mkDerivation {
   pname = "zigTest";
   version = "v0.1";
   src = ./.;
-  dontBuild = true;
+  buildPhase = ''
+    mkdir -p $out/bin
+    zig build --cache-dir $out/
+  '';
 
   installPhase = ''
-    mkdir -p $out/bin
-    mv zig-out/bin/zig-lang $out/bin/zigTest
+    ls -la
+    exit 1
+    # cp zig-out/bin/gl_learn $out/bin/zigTest
   '';
 }
 

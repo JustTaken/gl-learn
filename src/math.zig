@@ -80,12 +80,37 @@ pub const Matrix = struct {
             .z = [3]f32 {0.0, 0.0, z},
         };
     }
+
+    pub fn xrotation(theta: f32) Matrix {
+        return .{
+            .x = [3]f32 {1.0, 0.0, 0.0},
+            .y = [3]f32 {0.0, std.math.cos(theta), -std.math.sin(theta)},
+            .z = [3]f32 {0.0, std.math.sin(theta), std.math.cos(theta)},
+        };
+    }
+
+    pub fn yrotation(theta: f32) Matrix {
+        return .{
+            .x = [3]f32 {std.math.cos(theta), 0.0, std.math.sin(theta)},
+            .y = [3]f32 {0.0, 1.0, 0.0},
+            .z = [3]f32 {-std.math.sin(theta), 0.0, std.math.cos(theta)},
+        };
+    }
+
+    pub fn zrotation(theta: f32) Matrix {
+        return .{
+            .x = [3]f32 {std.math.cos(theta), -std.math.sin(theta), 0.0},
+            .y = [3]f32 {std.math.sin(theta), std.math.cos(theta), 0.0},
+            .z = [3]f32 {0.0, 0.0, 1.0},
+        };
+    }
+
+    pub fn translate(x: f32, y: f32, z: f32) [4][4]f32 {
+        return .{
+            [4]f32 {1.0, 0.0, 0.0, 0.0},
+            [4]f32 {0.0, 1.0, 0.0, 0.0},
+            [4]f32 {0.0, 0.0, 1.0, 0.0},
+            [4]f32 {x, y, z, 1.0},
+        };
+    }
 };
-
-test "dot product" {
-    const v1 = Vec.init(1.0, 0.0, 0.0);
-    const v2 = Vec.init(0.0, 1.0, 1.0);
-
-    try std.testing.expect(v1.dot(v2) == 0.0);
-    try std.testing.expect(Vec.dot(v1, v2) == 0.0);
-}

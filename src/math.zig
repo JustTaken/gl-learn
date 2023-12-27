@@ -29,14 +29,6 @@ pub const Vec = struct {
         };
     }
 
-    // pub fn mult(self: Vec, matrix: Matrix) Vec {
-    //     return .{
-    //         .x = self.x * matrix.x[0] + self.y * matrix.x[1] + self.z * matrix.x[2],
-    //         .y = self.x * matrix.y[0] + self.y * matrix.y[1] + self.z * matrix.y[2],
-    //         .z = self.x * matrix.z[0] + self.y * matrix.z[1] + self.z * matrix.z[2],
-    //     };
-    // }
-
     pub fn dot(self: Vec, other: Vec) f32 {
         return self.x * other.x + self.y * other.y + self.z * other.z;
     }
@@ -66,6 +58,14 @@ pub const Vec = struct {
             .z = self.z / length,
         };
     }
+
+    pub fn mult(vec: Vec, alpha: f32) Vec {
+        return .{
+            .x = vec.x * alpha,
+            .y = vec.y * alpha,
+            .z = vec.z * alpha,
+        };
+    }
 };
 
 pub const Matrix = struct {
@@ -78,29 +78,15 @@ pub const Matrix = struct {
         };
     }
 
-    pub fn xrotation(theta: f32) [4][4]f32 {
-        return .{
-            [4]f32 {1.0, 0.0, 0.0, 0.0},
-            [4]f32 {0.0, std.math.cos(theta), -std.math.sin(theta), 0.0},
-            [4]f32 {0.0, std.math.sin(theta), std.math.cos(theta), 0.0},
-            [4]f32 {0.0, 0.0, 0.0, 1.0},
-        };
-    }
+    pub fn rotate(theta: f32, vec: Vec) [4][4]f32 {
+        const norm = vec.normalize();
+        const c = std.math.cos(theta);
+        const s = std.math.sin(theta);
 
-    pub fn yrotation(theta: f32) [4][4]f32 {
         return .{
-            [4]f32 {std.math.cos(theta), 0.0, std.math.sin(theta), 0.0},
-            [4]f32 {0.0, 1.0, 0.0, 0.0},
-            [4]f32 {-std.math.sin(theta), 0.0, std.math.cos(theta), 0.0},
-            [4]f32 {0.0, 0.0, 0.0, 1.0},
-        };
-    }
-
-    pub fn zrotation(theta: f32) [4][4]f32 {
-        return .{
-            [4]f32 {std.math.cos(theta), -std.math.sin(theta), 0.0, 0.0},
-            [4]f32 {std.math.sin(theta), std.math.cos(theta), 0.0, 0.0},
-            [4]f32 {0.0, 0.0, 1.0, 0.0},
+            [4]f32 {c + norm.x * norm.x * (1 - c),norm.y * norm.x * (1 - c) + norm.z * s,norm.z * norm.x * (1 - c) - norm.y * s, 0.0},
+            [4]f32 {norm.x * norm.y * (1 - c) - vec.z * s,c + norm.y * norm.y * (1 - c), norm.z * norm.y * (1 - c) + norm.x * s, 0.0},
+            [4]f32 {norm.x * norm.z * (1 - c) + norm.y * s,norm.y * norm.z * (1 - c) - norm.x * s,c + norm.z * norm.z * (1 - c), 0.0},
             [4]f32 {0.0, 0.0, 0.0, 1.0},
         };
     }

@@ -1,16 +1,17 @@
 const std = @import("std");
 const math = @import("math.zig");
 const util = @import("util.zig");
-const Camera = util.Camera;
 
 const c = @cImport({
     @cInclude("SDL2/SDL.h");
     @cInclude("glad/glad.h");
 });
 
+const Camera = util.Camera;
 const APPLICATION_NAME = "OpenGL Window";
 const SCREEN_WIDTH: isize = 640;
 const SCREEN_HEIGHT: isize = 480;
+var rotating: bool = true;
 
 const OpenGL = struct {
     window: *c.SDL_Window,
@@ -112,21 +113,27 @@ fn create_graphics_pipeline(gl: *OpenGL) !void {
 
 fn input(gl: *OpenGL) void {
     var event: c.SDL_Event = undefined;
+    c.SDL_WarpMouseInWindow(gl.window, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+    _ = c.SDL_SetRelativeMouseMode(c.SDL_TRUE);
 
-    gl.u_rotate -= 1.0;
+    if (rotating) {
+        gl.u_rotate -= 1.0;
+    }
     while (c.SDL_PollEvent(&event) != 0) {
         if (event.type == c.SDL_QUIT) {
             gl.running = false;
             break;
-        }
-
-        const state: [*c]const u8 = c.SDL_GetKeyboardState(null);
-        if (state[c.SDL_SCANCODE_UP] != 0) {
-            gl.camera.foward();
-        }
-
-        if (state[c.SDL_SCANCODE_DOWN] != 0) {
-            gl.camera.backward();
+        } else if (event.type == c.SDL_MOUSEMOTION) {
+            gl.camera.mouse(event.motion.xrel, event.motion.yrel);
+        } else if (event.type == c.SDL_KEYDOWN) {
+            const state: [*c]const u8 = c.SDL_GetKeyboardState(null);
+            if (state[c.SDL_SCANCODE_W] != 0) gl.camera.move_foward();
+            if (state[c.SDL_SCANCODE_S] != 0) gl.camera.move_backward();
+            if (state[c.SDL_SCANCODE_D] != 0) gl.camera.move_right();
+            if (state[c.SDL_SCANCODE_A] != 0) gl.camera.move_left();
+            if (state[c.SDL_SCANCODE_Q] != 0) {
+                rotating = !rotating;
+            }
         }
     }
 }
@@ -135,15 +142,15 @@ fn pre_draw(gl: *OpenGL) void {
     c.glDisable(c.GL_DEPTH_TEST);
     c.glDisable(c.GL_CULL_FACE);
     c.glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    c.glClearColor(1.0, 1.0, 0.0, 1.0);
-    c.glClear(c.GL_DEPTH_BUFFER_BIT | c.GL_COLOR_BUFFER_BIT);
+    c.glClearColor(1.0, 1.0, 1.0, 1.0);
+    c.glClear(c.GL_COLOR_BUFFER_BIT);
     c.glUseProgram(gl.shader_program);
 
-    const translation: [4][4]f32 = math.Matrix.translate(0.0, 0.0, -2.0);
+    const translation: [4][4]f32 = math.Matrix.translate(0.0, 0.0, 0.0);
     const rotation = math.Matrix.rotate(gl.u_rotate * std.math.pi / 180.0, math.Vec.init(0.0, 1.0, 0.0));
     const scale = math.Matrix.scale(gl.u_scale, gl.u_scale, gl.u_scale);
 
-    const projection: [4][4]f32 = math.Matrix.perspective(45.0 * std.math.pi / 180.0, @as(f32, SCREEN_WIDTH ) / @as(f32, SCREEN_HEIGHT), 0.1, 10.0);
+    const projection: [4][4]f32 = math.Matrix.perspective(45.0 * std.math.pi / 180.0, @as(f32, SCREEN_WIDTH) / @as(f32, SCREEN_HEIGHT), 0.1, 100.0);
     const model = math.Matrix.mult(math.Matrix.mult(translation, rotation), scale);
     const view = gl.camera.view_matrix();
 

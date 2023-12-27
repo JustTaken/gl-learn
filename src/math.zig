@@ -59,11 +59,19 @@ pub const Vec = struct {
         };
     }
 
-    pub fn mult(vec: Vec, alpha: f32) Vec {
+    pub fn scale(vec: Vec, alpha: f32) Vec {
         return .{
             .x = vec.x * alpha,
             .y = vec.y * alpha,
             .z = vec.z * alpha,
+        };
+    }
+
+    pub fn mult(vec: Vec, matrix: [4][4]f32) Vec {
+        return .{
+            .x = matrix[0][0] * vec.x + matrix[1][0] * vec.y + matrix[2][0] * vec.z,
+            .y = matrix[0][1] * vec.x + matrix[1][1] * vec.y + matrix[2][1] * vec.z,
+            .z = matrix[0][2] * vec.x + matrix[1][2] * vec.y + matrix[2][2] * vec.z,
         };
     }
 };
@@ -84,9 +92,9 @@ pub const Matrix = struct {
         const s = std.math.sin(theta);
 
         return .{
-            [4]f32 {c + norm.x * norm.x * (1 - c),norm.y * norm.x * (1 - c) + norm.z * s,norm.z * norm.x * (1 - c) - norm.y * s, 0.0},
-            [4]f32 {norm.x * norm.y * (1 - c) - vec.z * s,c + norm.y * norm.y * (1 - c), norm.z * norm.y * (1 - c) + norm.x * s, 0.0},
-            [4]f32 {norm.x * norm.z * (1 - c) + norm.y * s,norm.y * norm.z * (1 - c) - norm.x * s,c + norm.z * norm.z * (1 - c), 0.0},
+            [4]f32 {c + norm.x * norm.x * (1 - c), norm.y * norm.x * (1 - c) + norm.z * s, norm.z * norm.x * (1 - c) - norm.y * s,  0.0},
+            [4]f32 {norm.x * norm.y * (1 - c) - vec.z * s, c + norm.y * norm.y * (1 - c),  norm.z * norm.y * (1 - c) + norm.x * s,  0.0},
+            [4]f32 {norm.x * norm.z * (1 - c) + norm.y * s, norm.y * norm.z * (1 - c) - norm.x * s, c + norm.z * norm.z * (1 - c),  0.0},
             [4]f32 {0.0, 0.0, 0.0, 1.0},
         };
     }

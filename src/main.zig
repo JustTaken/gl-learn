@@ -7,11 +7,9 @@ const c = @cImport({
     @cInclude("glad/glad.h");
 });
 
+const APPLICATION_NAME = "OpenGL Window";
 const SCREEN_WIDTH: isize = 640;
 const SCREEN_HEIGHT: isize = 480;
-
-const vertex_shader_program: [*c]const u8 = "#version 460 core\nlayout(location = 0) in vec3 position;\nlayout(location = 1) in vec3 vertex_color;\nout vec3 v_vertex_colors;\nvoid main()\n{\nv_vertex_colors = vertex_color;\ngl_Position = vec4(position.x, position.y, position.z, 1.0f);\n}\n";
-const fragment_shader_program: [*c]const u8 = "#version 460 core\nin vec3 v_vertex_colors;\nout vec4 color;\nvoid main()\n{\ncolor = vec4(v_vertex_colors.r, v_vertex_colors.g, v_vertex_colors.b, 1.0f);\n}\n";
 
 const OpenGL = struct {
     window: *c.SDL_Window,
@@ -21,15 +19,18 @@ const OpenGL = struct {
     index_buffer_obj: u32,
     shader_program: u32,
     u_offset: f32,
+    u_rotate: f32,
+    u_scale: f32,
     running: bool,
 };
 
 fn initizlize() !OpenGL {
+    std.log.debug("Initilizing {s}", .{APPLICATION_NAME});
     if (c.SDL_Init(c.SDL_INIT_VIDEO) != 0) {
         return error.InitializeError;
     }
 
-    const window = c.SDL_CreateWindow("OpenGL window", 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, c.SDL_WINDOW_OPENGL) orelse return error.InitializeError;
+    const window = c.SDL_CreateWindow(APPLICATION_NAME, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, c.SDL_WINDOW_OPENGL) orelse return error.InitializeError;
     const context = c.SDL_GL_CreateContext(window) orelse return error.InitializeError;
     if (c.gladLoadGLLoader(c.SDL_GL_GetProcAddress) == 0) return error.InitializeErorr;
 
@@ -40,7 +41,9 @@ fn initizlize() !OpenGL {
         .buffer_obj = 0,
         .shader_program = 0,
         .index_buffer_obj = 0,
-        .u_offset = 0.0,
+        .u_offset = -2.0,
+        .u_rotate = 0.0,
+        .u_scale = 0.5,
         .running = true,
     };
 }
@@ -49,10 +52,10 @@ fn vertex_specification(gl: *OpenGL) !void {
     const size = @sizeOf(f32);
     const index_buffer = [_]u32 {0, 2, 1, 3, 2, 0};
     const vertex_buffer = [_]f32 { 
-        -0.5, -0.5, 0.0, 1.0, 0.0, 0.0,
-        -0.5,  0.5, 0.0, 0.0, 1.0, 0.0,
-         0.5,  0.5, 0.0, 0.0, 0.0, 1.0,
-         0.5, -0.5, 0.0, 0.0, 0.0, 1.0
+        -1.0, -1.0, 0.0, 1.0, 0.0, 0.0,
+        -1.0,  1.0, 0.0, 0.0, 1.0, 0.0,
+         1.0,  1.0, 0.0, 0.0, 0.0, 1.0,
+         1.0, -1.0, 0.0, 0.0, 0.0, 1.0
     };
 
     c.glGenVertexArrays(1, &gl.array_obj);
@@ -100,16 +103,6 @@ fn create_graphics_pipeline(gl: *OpenGL) !void {
     c.glCompileShader(vertex_shader);
     c.glCompileShader(fragment_shader);
 
-    // var result: i32 = 0;
-    // c.glGetShaderiv(vertex_shader, c.GL_COMPILE_STATUS, &result);
-    // if (result == c.GL_FALSE) {
-    //     var length: i32 = 0;
-    //     c.glGetShaderiv(vertex_shader, c.GL_INFO_LOG_LENGTH, &length);
-    //     var message: [100]u8 = undefined;
-    //     c.glGetShaderInfoLog(vertex_shader, length, &length, &message[0]);
-    //     std.debug.print("{s}\n", .{message});
-    // }
-
     c.glAttachShader(program_obj, fragment_shader);
     c.glAttachShader(program_obj, vertex_shader);
 
@@ -130,12 +123,18 @@ fn input(gl: *OpenGL) void {
 
         const state: [*c]const u8 = c.SDL_GetKeyboardState(null);
         if (state[c.SDL_SCANCODE_UP] != 0) {
-            std.debug.print("UP\n", .{});
             gl.u_offset += 0.01;
         }
 
+        if (state[c.SDL_SCANCODE_LEFT] != 0) {
+            gl.u_rotate += 1.0;
+        }
+
+        if (state[c.SDL_SCANCODE_RIGHT] != 0) {
+            gl.u_rotate -= 1.0;
+        }
+
         if (state[c.SDL_SCANCODE_DOWN] != 0) {
-            std.debug.print("DOWN\n", .{});
             gl.u_offset -= 0.01;
         }
     }
@@ -149,14 +148,21 @@ fn pre_draw(gl: *OpenGL) void {
     c.glClear(c.GL_DEPTH_BUFFER_BIT | c.GL_COLOR_BUFFER_BIT);
     c.glUseProgram(gl.shader_program);
 
-    const model: [4][4]f32 = math.Matrix.translate(0.0, gl.u_offset, 0.0);
-    const model_location = c.glGetUniformLocation(gl.shader_program, "u_model_matrix");
-    const perspective_location = c.glGetUniformLocation(gl.shader_program, "u_perspective_matrix");
-    _ = perspective_location;
+    const projection: [4][4]f32 = math.Matrix.perspective(45.0 * std.math.pi / 180.0, @as(f32, SCREEN_WIDTH ) / @as(f32, SCREEN_HEIGHT), 0.1, 10.0);
+    const translation: [4][4]f32 = math.Matrix.translate(0.0, 0.0, gl.u_offset);
+    const rotation = math.Matrix.yrotation(gl.u_rotate * std.math.pi / 180.0);
+    const scale = math.Matrix.scale(gl.u_scale, gl.u_scale, gl.u_scale);
 
-    if (model_location >= 0) {
+    const model = math.Matrix.mult(math.Matrix.mult(translation, rotation), scale);
+    
+    const model_location = c.glGetUniformLocation(gl.shader_program, "u_model");
+    const projection_location = c.glGetUniformLocation(gl.shader_program, "u_projection");
+
+    if ((model_location >= 0) and (projection_location >= 0)) {
         c.glUniformMatrix4fv(model_location, 1, c.GL_FALSE, &model[0][0]);
-        std.debug.print("{d}\n", .{model});
+        c.glUniformMatrix4fv(projection_location, 1, c.GL_FALSE, &projection[0][0]);
+    } else {
+        std.log.err("Could not find the right uniform location\n", .{});
     }
 }
 
@@ -169,6 +175,7 @@ fn draw(gl: *OpenGL) void {
 fn cleanup(gl: OpenGL) void {
     c.SDL_DestroyWindow(gl.window);
     c.SDL_Quit();
+    std.log.debug("Ending {s}", .{APPLICATION_NAME});
 }
 
 fn loop(gl: *OpenGL) !void {

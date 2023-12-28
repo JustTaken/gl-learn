@@ -1,6 +1,33 @@
 const std = @import("std");
+const c = @cImport({
+    @cInclude("SDL2/SDL.h");
+    @cInclude("glad/glad.h");
+});
 const Vec = @import("math.zig").Vec;
 const Matrix = @import("math.zig").Matrix;
+
+pub const OpenGL = struct {
+    window: *c.SDL_Window,
+    context: c.SDL_GLContext,
+    array_obj: u32,
+    shader_program: u32,
+    camera: Camera,
+    cubes: [11]Cube,
+    running: bool,
+};
+
+pub const Cube = struct {
+    position: Vec,
+    color: [4][4]f32 ,
+
+    pub const number_of_points: i32 = 8;
+
+    pub fn model(self: Cube, rotation: [4][4]f32) [4][4]f32 {
+        const translation: [4][4]f32 = Matrix.translate(self.position.x, self.position.y, self.position.z);
+
+        return Matrix.mult(translation, rotation);
+    }
+};
 
 pub const Camera = struct {
     up: Vec,
@@ -60,31 +87,28 @@ pub const Camera = struct {
             rotate
         );
 
-        std.debug.print("eye: {}\n", .{self.eye});
-        std.debug.print("direction: {}\n", .{direction});
-
         self.center = Vec.sum(self.eye, direction);
         self.up = Vec.cross(right, direction).normalize();
     }
 
-    pub fn move_foward(self: *Camera) void {
+    pub fn move_foward(self: *Camera, speed: f32) void {
         const direction = Vec.sub(self.eye, self.center);
-        self.eye = Vec.sum(direction.normalize().scale(0.1), self.eye);
+        self.eye = Vec.sum(direction.normalize().scale(speed * 10.0), self.eye);
     }
 
-    pub fn move_backward(self: *Camera) void {
+    pub fn move_backward(self: *Camera, speed: f32) void {
         const direction = Vec.sub(self.eye, self.center);
-        self.eye = Vec.sub(direction.normalize().scale(0.1), self.eye);
+        self.eye = Vec.sub(direction.normalize().scale(speed * 10.0), self.eye);
     }
 
-    pub fn move_right(self: *Camera) void {
-        const delta = Vec.cross(Vec.sub(self.eye, self.center), self.up).normalize().scale(0.1);
+    pub fn move_right(self: *Camera, speed: f32) void {
+        const delta = Vec.cross(Vec.sub(self.eye, self.center), self.up).normalize().scale(speed * 10.0);
         self.eye = Vec.sum(delta, self.eye);
         self.center = Vec.sum(delta, self.center);
     }
 
-    pub fn move_left(self: *Camera) void {
-        const delta = Vec.cross(Vec.sub(self.eye, self.center), self.up).normalize().scale(0.1);
+    pub fn move_left(self: *Camera, speed: f32) void {
+        const delta = Vec.cross(Vec.sub(self.eye, self.center), self.up).normalize().scale(speed * 10.0);
         self.eye = Vec.sub(delta, self.eye);
         self.center = Vec.sub(delta, self.center);
     }

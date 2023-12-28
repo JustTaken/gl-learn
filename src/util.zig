@@ -3,16 +3,18 @@ const c = @cImport({
     @cInclude("SDL2/SDL.h");
     @cInclude("glad/glad.h");
 });
+
+const ArrayList = std.ArrayList;
 const Vec = @import("math.zig").Vec;
 const Matrix = @import("math.zig").Matrix;
 
 pub const OpenGL = struct {
     window: *c.SDL_Window,
     context: c.SDL_GLContext,
-    array_obj: u32,
+    array_obj: [2]u32,
     shader_program: u32,
     camera: Camera,
-    cubes: [11]Cube,
+    cubes: ArrayList(Cube),
     running: bool,
 };
 
@@ -20,7 +22,7 @@ pub const Cube = struct {
     position: Vec,
     color: [4][4]f32 ,
 
-    pub const number_of_points: i32 = 8;
+    pub const number_of_points: i32 = 12;
 
     pub fn model(self: Cube, rotation: [4][4]f32) [4][4]f32 {
         const translation: [4][4]f32 = Matrix.translate(self.position.x, self.position.y, self.position.z);
@@ -36,7 +38,7 @@ pub const Camera = struct {
 
     pub fn default() Camera {
         return .{
-            .eye = Vec.init(0.0, 0.0, 1.0),
+            .eye = Vec.init(0.0, 0.0, 2.0),
             .center = Vec.init(0.0, 0.0, 0.0),
             .up = Vec.init(0.0, 1.0, 0.0),
         };

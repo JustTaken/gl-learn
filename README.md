@@ -1,6 +1,6 @@
 # OpenGL
 It's an abstraction layer for us to comunicate with our graphics
-card, and draw thigs on the screen with it.
+card, and draw things on the screen with it.
 
 # Formal definition
 OpenGL (Open Graphics Library) is a cross-language, cross-platform

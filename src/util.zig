@@ -17,6 +17,7 @@ pub const OpenGL = struct {
     cubes: ArrayList(Cube),
     planes: ArrayList(Plane),
     running: bool,
+    last_frame: f32,
 };
 
 pub const Plane = struct {
